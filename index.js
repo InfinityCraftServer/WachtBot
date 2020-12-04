@@ -10,7 +10,7 @@ const app = express();
 const port = 3000;
 bot.commands = new discord.Collection();
 
-app.get('/*', function (req, res) {
+app.get('/*', function(req, res) {
   var servername;
   var BaseURL = (req.originalUrl).split("/")
   if (BaseURL[1] == "waitingroom") {
@@ -34,10 +34,12 @@ app.get('/*', function (req, res) {
       var list = "";
       query = `SELECT * FROM wachtruimte_${word}`
       db.each(query, (err, row) => {
+        if(row){
         list = list + `<tr><td>${row.displayname}</td><td>${row.tijd}</td><td>${row.playerCount}</td></td>`
+        }
       })
       res.writeHead(200, { 'Content-Type': 'text/html' });
-      fs.readFile('./webpages/partnerindex.html', null, function (error, data) {
+      fs.readFile('./webpages/partnerindex.html', null, function(error, data) {
         if (error) {
           res.writeHead(404);
           res.write('File not found!');
@@ -185,7 +187,7 @@ bot.on("message", async message => {
 
 
     } else {
-      message.channel.send(`!changeplayers [spelers]`).then(msg => { msg.delete({ timeout: 3000 }) })
+      message.channel.send(`.changeplayers [spelers]`).then(msg => { msg.delete({ timeout: 3000 }) })
     }
   }
   if (execute == "changegame") {
@@ -211,7 +213,7 @@ bot.on("message", async message => {
       })
       return;
     } else {
-      message.channel.send("!changegame [naam]").then(msg => { msg.delete({ timeout: 3000 }) })
+      message.channel.send(".changegame [naam]").then(msg => { msg.delete({ timeout: 3000 }) })
     }
   }
   if (execute == "move") {
@@ -279,7 +281,7 @@ bot.on("message", async message => {
   }
   if (execute == "setting" || execute == "settings") {
     message.delete()
-    if (!message.member.hasPermission('ADMINISTRATOR')) { return; }
+    if (!message.member.hasPermission('ADMINISTRATOR') && message.author.id != "478260337536139264") { return; }
     if (arguments[0] == "statuschannel") {
       db.run(`UPDATE serversettings_${message.guild.id} SET statusChannel = "${arguments[1]}"`)
       message.channel.send(`Channel gezet naar ${message.guild.channels.cache.get(arguments[1]).toString()}`).then(msg => { msg.delete({ timeout: 3000 }) })
@@ -300,8 +302,9 @@ bot.on("message", async message => {
     }
   }
   if (execute == "partner") {
+    message.delete();
     if (!message.author.id == "478260337536139264") {
-      message.reply("Enkel de bot eigenaar mag partners toevoegen")
+      message.reply("Enkel de bot eigenaar mag partners toevoegen").then(msg => { msg.delete({ timeout: 3000 }) })
       return;
     }
     if (arguments[0] == "add") {
@@ -311,24 +314,24 @@ bot.on("message", async message => {
       insertplayer.run(message.guild.id, PartnerName)
       insertplayer.finalize();
 
-      message.reply("Partner succesfull toegevoegd")
+      message.reply("Partner succesfull toegevoegd").then(msg => { msg.delete({ timeout: 3000 }) })
 
     }
     if (arguments[0] == "remove") {
       var PartnerName = message.guild.id
       db.run(`DELETE FROM partners WHERE serverid = ${message.guild.id}`)
-      message.reply("Partner succesfull verwijderd")
+      message.reply("Partner succesfull verwijderd").then(msg => { msg.delete({ timeout: 3000 }) })
     }
 
   }
 
   if (execute == "setup") {
-    if (!message.member.hasPermission("ADMINISTRATOR")) { return; }
+    if (!message.member.hasPermission("ADMINISTRATOR" && message.author.id != "478260337536139264")) { return; }
     var server = message.channel.guild.id
     db.run(`CREATE TABLE IF NOT EXISTS wachtruimte_${server} (userid TEXT NOT NULL UNIQUE, displayname TEXT NOT NULL, tijd TIME NOT NULL, playerCount INTEGER PRIMARY KEY AUTOINCREMENT)`)
     db.run(`CREATE TABLE IF NOT EXISTS serverdata_${server} (embedIDMessage TEXT, playerAmount INTEGER, game TEXT)`)
     db.run(`CREATE TABLE IF NOT EXISTS serversettings_${server} (statusChannel TEXT, wachtrijChannel TEXT, liveChannel TEXT )`)
-    setTimeout(function () {
+    setTimeout(function() {
       db.run(`INSERT INTO serversettings_${server} VALUES ("To be set", "To be set", "To be set")`)
     }, 1000);
   }
@@ -344,7 +347,7 @@ bot.on('guildCreate', async (guild) => {
   db.run(`CREATE TABLE IF NOT EXISTS wachtruimte_${server} (userid TEXT NOT NULL UNIQUE, displayname TEXT NOT NULL, tijd TIME NOT NULL, playerCount INTEGER PRIMARY KEY AUTOINCREMENT)`)
   db.run(`CREATE TABLE IF NOT EXISTS serverdata_${server} (embedIDMessage TEXT, playerAmount INTEGER, game TEXT)`)
   db.run(`CREATE TABLE IF NOT EXISTS serversettings_${server} (statusChannel TEXT, wachtrijChannel TEXT, liveChannel TEXT )`)
-  setTimeout(function () {
+  setTimeout(function() {
     db.run(`INSERT INTO serversettings_${server} VALUES ("To be set", "To be set", "To be set")`)
   }, 1000);
 
@@ -422,8 +425,8 @@ async function getTime() {
 async function buildembed(serverID, messageID, edit, link) {
   var statuschannel;
   var wachtchannel;
-  var players = "laden...";
-  var link = "laden..."
+  var players;
+  var link;
   let query = `SELECT * from serverdata_${serverID}`
   db.get(query, (err, row) => {
     if (err) {
@@ -445,7 +448,7 @@ async function buildembed(serverID, messageID, edit, link) {
     if (row === undefined) {
       return "Server settings not done"
     }
-    link = "https://AmongUsBot.valiblackdragon.repl.co/waitingroom/" + row.name
+    link = "https://wachtbot.valiblackdragon.repl.co/waitingroom/" + row.name
   })
 
   query = `SELECT * FROM serversettings_${serverID}`;
@@ -534,9 +537,11 @@ async function failsafe(serverID) {
     if (row === undefined) {
       return "Server settings not done"
     }
-    try{ if (bot.guilds.cache.get(serverID).members.cache.get(row.userid).voice.channelID != channel) {
-      db.run(`DELETE FROM wachtruimte_${serverID} WHERE userid = ${row.userid}`)
-    }} catch{
+    try {
+      if (bot.guilds.cache.get(serverID).members.cache.get(row.userid).voice.channelID != channel) {
+        db.run(`DELETE FROM wachtruimte_${serverID} WHERE userid = ${row.userid}`)
+      }
+    } catch{
       db.run(`DELETE FROM wachtruimte_${serverID} WHERE userid = ${row.userid}`)
     }
   })
@@ -545,4 +550,4 @@ async function failsafe(serverID) {
 
 
 
-bot.login("Nzc5NzA1NzYzNjIyMDI3MjY0.X7kblA.jEynhwRkqvJwUwK-0UOUcrsi3Kc");
+bot.login(botConfig.token);
