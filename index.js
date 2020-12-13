@@ -34,8 +34,8 @@ app.get('/*', function(req, res) {
       var list = "";
       query = `SELECT * FROM wachtruimte_${word}`
       db.each(query, (err, row) => {
-        if(row){
-        list = list + `<tr><td>${row.displayname}</td><td>${row.tijd}</td><td>${row.playerCount}</td></td>`
+        if (row) {
+          list = list + `<tr><td>${row.displayname}</td><td>${row.tijd}</td><td>${row.playerCount}</td></td>`
         }
       })
       res.writeHead(200, { 'Content-Type': 'text/html' });
@@ -178,7 +178,6 @@ bot.on("message", async message => {
           return;
         }
         if (row === undefined) {
-          console.log("Undefined")
         } else {
           let word = row.embedIDMessage;
           buildembed(message.guild.id, word, true)
@@ -205,7 +204,6 @@ bot.on("message", async message => {
           return;
         }
         if (row === undefined) {
-          console.log("Undefined")
         } else {
           let word = row.embedIDMessage;
           buildembed(message.guild.id, word, true)
@@ -227,7 +225,6 @@ bot.on("message", async message => {
         return;
       }
       if (row === undefined) {
-        console.log("Undefined")
       } else {
         liveVoiceChat = bot.channels.cache.get(row.liveChannel);
 
@@ -243,18 +240,24 @@ bot.on("message", async message => {
           players = parseInt(row.playerAmount);
           var needsMove = players - liveVoiceChat.members.size;
           if (needsMove < 0) { needsMove = 0 }
-          players = parseInt(row.playerAmount);
           needsMove = players - liveVoiceChat.members.size;
           if (needsMove < 0) { needsMove = 0 }
-          query = `SELECT userid FROM wachtruimte_${message.guild.id} LIMIT ${needsMove}`
-          db.each(query, (err, row) => {
-            if (err) {
-              console.log(err);
-              return;
-            }
-            var moveuser = message.guild.members.cache.get(row.userid)
-            moveuser.voice.setChannel(liveVoiceChat)
-          })
+          for (i = 0; i < needsMove; i++) {
+            setTimeout(function() {
+              query = `SELECT userid FROM wachtruimte_${message.guild.id} WHERE playerCount = ( SELECT min(playerCount) FROM wachtruimte_${message.guild.id} )`
+              db.get(query, (err, row) => {
+                if (err) {
+                  console.log(err);
+                  return;
+                }
+                try{
+                var moveuser = message.guild.members.cache.get(row.userid)
+                moveuser.voice.setChannel(liveVoiceChat)
+                } catch {}
+              })
+            }, 1000 * i)
+
+          }
         })
       }
     })
@@ -367,7 +370,6 @@ bot.on('voiceStateUpdate', async (oldMember, newMember) => {
       return;
     }
     if (row === undefined) {
-      console.log("Undefined")
     } else {
       let word = row.wachtrijChannel;
       if (newUserChannel == word) {
@@ -387,7 +389,6 @@ bot.on('voiceStateUpdate', async (oldMember, newMember) => {
       return;
     }
     if (row === undefined) {
-      console.log("Undefined")
     } else {
       let word = row.embedIDMessage;
       buildembed(newMember.guild.id, word, true)
@@ -404,7 +405,6 @@ async function getWaitingroom(server) {
       return;
     }
     if (row === undefined) {
-      console.log("Undefined")
     } else {
       channelid = row.wachtrijChannel;
       var channel = bot.channels.cache.get(channelid)
@@ -477,7 +477,9 @@ async function buildembed(serverID, messageID, edit, link) {
     if (edit == true) {
       try {
         statuschannel.messages.fetch(messageID).then(message => {
+          setTimeout(function(){
           message.edit(WaitEmbed)
+          }, 1000)
           return;
         }
         )
@@ -547,7 +549,5 @@ async function failsafe(serverID) {
   })
   getWaitingroom(serverID)
 }
-
-
 
 bot.login(botConfig.token);
