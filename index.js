@@ -329,7 +329,7 @@ bot.on("message", async message => {
   }
 
   if (execute == "setup") {
-    if (!message.member.hasPermission("ADMINISTRATOR" && message.author.id != "478260337536139264")) { return; }
+    // if (!message.member.hasPermission("ADMINISTRATOR" && message.author.id != "478260337536139264")) { return; }
     var server = message.channel.guild.id
     db.run(`CREATE TABLE IF NOT EXISTS wachtruimte_${server} (userid TEXT NOT NULL UNIQUE, displayname TEXT NOT NULL, tijd TIME NOT NULL, playerCount INTEGER PRIMARY KEY AUTOINCREMENT)`)
     db.run(`CREATE TABLE IF NOT EXISTS serverdata_${server} (embedIDMessage TEXT, playerAmount INTEGER, game TEXT)`)
