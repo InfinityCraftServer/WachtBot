@@ -250,10 +250,10 @@ bot.on("message", async message => {
                   console.log(err);
                   return;
                 }
-                try{
-                var moveuser = message.guild.members.cache.get(row.userid)
-                moveuser.voice.setChannel(liveVoiceChat)
-                } catch {}
+                try {
+                  var moveuser = message.guild.members.cache.get(row.userid)
+                  moveuser.voice.setChannel(liveVoiceChat)
+                } catch { }
               })
             }, 1000 * i)
 
@@ -326,6 +326,13 @@ bot.on("message", async message => {
       message.reply("Partner succesfull verwijderd").then(msg => { msg.delete({ timeout: 3000 }) })
     }
 
+  }
+  if (execute == "serverrepair") {
+    if (message.author.id != "478260337536139264") return;
+    var server = message.channel.guild.id
+    db.run(`DROP TABLE serversettings_${server}`)
+    db.run(`DROP TABLE serverdata_${server}`)
+    db.run(`DROP TABLE wachtruimte_${server}`)
   }
 
   if (execute == "setup") {
@@ -477,8 +484,8 @@ async function buildembed(serverID, messageID, edit, link) {
     if (edit == true) {
       try {
         statuschannel.messages.fetch(messageID).then(message => {
-          setTimeout(function(){
-          message.edit(WaitEmbed)
+          setTimeout(function() {
+            message.edit(WaitEmbed)
           }, 1000)
           return;
         }
@@ -550,4 +557,4 @@ async function failsafe(serverID) {
   getWaitingroom(serverID)
 }
 
-bot.login(botConfig.token);
+bot.login(process.env.token);
